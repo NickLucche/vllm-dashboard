@@ -5,7 +5,7 @@ import {
   dateRangeChunks,
   fetchWindowRecords,
   ingestStartDate,
-  type ForceMergeRecord,
+  upsertForceMergeRecords,
 } from "@/lib/force-merge-stats";
 
 export const maxDuration = 55;
@@ -16,51 +16,6 @@ const BACKFILL_DAYS = 182;
 // Stop starting new days after this, leaving headroom under maxDuration for
 // the in-flight day's fetch and upsert.
 const TIME_BUDGET_MS = 30_000;
-
-async function upsertRecords(
-  db: ReturnType<typeof getDb>,
-  records: ForceMergeRecord[],
-  fetchedAt: Date,
-): Promise<void> {
-  if (records.length === 0) return;
-  const rows = records.map((record) => ({
-    pr_number: record.prNumber,
-    title: record.title,
-    url: record.url,
-    author: record.author,
-    merged_by: record.mergedBy,
-    merged_at: record.mergedAt,
-    head_sha: record.headSha,
-    ci_state: record.ciState,
-    force_merged: record.forceMerged,
-    fetched_at: fetchedAt,
-  }));
-  await db`
-    INSERT INTO force_merge_records ${db(
-      rows,
-      "pr_number",
-      "title",
-      "url",
-      "author",
-      "merged_by",
-      "merged_at",
-      "head_sha",
-      "ci_state",
-      "force_merged",
-      "fetched_at",
-    )}
-    ON CONFLICT (pr_number) DO UPDATE SET
-      title = EXCLUDED.title,
-      url = EXCLUDED.url,
-      author = EXCLUDED.author,
-      merged_by = EXCLUDED.merged_by,
-      merged_at = EXCLUDED.merged_at,
-      head_sha = EXCLUDED.head_sha,
-      ci_state = EXCLUDED.ci_state,
-      force_merged = EXCLUDED.force_merged,
-      fetched_at = EXCLUDED.fetched_at
-  `;
-}
 
 export async function GET(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
@@ -98,7 +53,7 @@ export async function GET(request: NextRequest) {
     for (const day of days) {
       if (daysDone > 0 && Date.now() - startedAt > TIME_BUDGET_MS) break;
       const records = await fetchWindowRecords(client, day.start, day.end);
-      await upsertRecords(db, records, fetchedAt);
+      await upsertForceMergeRecords(db, records, fetchedAt);
       fetched += records.length;
       forced += records.filter((record) => record.forceMerged).length;
       daysDone++;

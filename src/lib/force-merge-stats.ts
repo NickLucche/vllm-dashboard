@@ -13,6 +13,8 @@
  * walked back to the merge instead.
  */
 
+import type { Sql } from "postgres";
+
 export const CI_STATUS_CONTEXT = "buildkite/ci/pr";
 const RED_CI_STATES = new Set(["failure", "error"]);
 const GITHUB_API_URL = "https://api.github.com";
@@ -276,4 +278,49 @@ export function createGitHubClient(token: string): GitHubClient {
         `${GITHUB_API_URL}/repos/${REPOSITORY_OWNER}/${REPOSITORY_NAME}/commits/${sha}/statuses?per_page=${STATUS_PAGE_SIZE}&page=${page}`,
       ),
   };
+}
+
+export async function upsertForceMergeRecords(
+  db: Sql,
+  records: ForceMergeRecord[],
+  fetchedAt: Date,
+): Promise<void> {
+  if (records.length === 0) return;
+  const rows = records.map((record) => ({
+    pr_number: record.prNumber,
+    title: record.title,
+    url: record.url,
+    author: record.author,
+    merged_by: record.mergedBy,
+    merged_at: record.mergedAt,
+    head_sha: record.headSha,
+    ci_state: record.ciState,
+    force_merged: record.forceMerged,
+    fetched_at: fetchedAt,
+  }));
+  await db`
+    INSERT INTO force_merge_records ${db(
+      rows,
+      "pr_number",
+      "title",
+      "url",
+      "author",
+      "merged_by",
+      "merged_at",
+      "head_sha",
+      "ci_state",
+      "force_merged",
+      "fetched_at",
+    )}
+    ON CONFLICT (pr_number) DO UPDATE SET
+      title = EXCLUDED.title,
+      url = EXCLUDED.url,
+      author = EXCLUDED.author,
+      merged_by = EXCLUDED.merged_by,
+      merged_at = EXCLUDED.merged_at,
+      head_sha = EXCLUDED.head_sha,
+      ci_state = EXCLUDED.ci_state,
+      force_merged = EXCLUDED.force_merged,
+      fetched_at = EXCLUDED.fetched_at
+  `;
 }
