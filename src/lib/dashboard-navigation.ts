@@ -15,7 +15,7 @@ export const DASHBOARD_SECTIONS = [
     href: "/",
     label: "CI Health",
     description:
-      "Build outcomes, job runs, queue health, test reliability, AMD parity, and alert history.",
+      "Build outcomes, job runs, queue health, test reliability, AMD parity, alert history, and force-merges.",
     links: [
       { href: "/", label: "Builds" },
       { href: "/jobs", label: "Jobs" },
@@ -23,6 +23,7 @@ export const DASHBOARD_SECTIONS = [
       { href: "/tests", label: "Tests" },
       { href: "/parity", label: "Parity" },
       { href: "/alerts", label: "Alerts" },
+      { href: "/force-merges", label: "Force-merges" },
     ],
   },
   {
@@ -45,7 +46,6 @@ export const TOP_LEVEL_NAV_ITEMS = [
   { href: "/perf", label: "Performance", routes: ["/perf"] },
   { href: "/eval", label: "Evaluation", routes: ["/eval"] },
   { href: "/compare", label: "Compare", routes: ["/compare"] },
-  { href: "/force-merges", label: "Force-merges", routes: ["/force-merges"] },
 ];
 
 export function routeMatches(pathname: string, href: string): boolean {

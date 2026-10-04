@@ -5,7 +5,7 @@ import {
   TOP_LEVEL_NAV_ITEMS,
 } from "./dashboard-navigation";
 
-test("CI Health owns builds, jobs, queue, tests, parity, and alerts routes", () => {
+test("CI Health owns builds, jobs, queue, tests, parity, alerts, and force-merges routes", () => {
   for (const pathname of [
     "/",
     "/jobs",
@@ -13,6 +13,7 @@ test("CI Health owns builds, jobs, queue, tests, parity, and alerts routes", () 
     "/tests",
     "/parity",
     "/alerts",
+    "/force-merges",
   ]) {
     assert.equal(sectionForPathname(pathname)?.label, "CI Health");
   }
@@ -24,6 +25,7 @@ test("CI Health owns builds, jobs, queue, tests, parity, and alerts routes", () 
     "/tests",
     "/parity",
     "/alerts",
+    "/force-merges",
   ]);
 });
 
@@ -34,7 +36,7 @@ test("Infrastructure owns GPU and Cost routes", () => {
 });
 
 test("standalone destinations do not render a section nav", () => {
-  for (const pathname of ["/perf", "/eval", "/compare", "/force-merges"]) {
+  for (const pathname of ["/perf", "/eval", "/compare"]) {
     assert.equal(sectionForPathname(pathname), undefined);
   }
 });
