@@ -59,6 +59,7 @@ interface ForceMergeResponse {
     refreshedAt: string | null;
   };
   error?: string;
+  detail?: string;
 }
 
 const WINDOW_LABELS: Record<number, string> = {
@@ -138,8 +139,9 @@ export default function ForceMergesPage() {
 
   if (error || data?.error) {
     return (
-      <div className="flex h-64 items-center justify-center text-red-400">
-        Failed to load force-merge data.
+      <div className="flex h-64 flex-col items-center justify-center gap-2 text-red-400">
+        <p>Failed to load force-merge data.</p>
+        {data?.detail && <p className="text-sm text-zinc-500">{data.detail}</p>}
       </div>
     );
   }

@@ -121,6 +121,19 @@ async function loadForceMergeSummary() {
   };
 }
 
+// Credential-free reason shown on the page, so a misconfigured deployment
+// says what to fix instead of failing silently.
+function describeError(error: unknown): string {
+  const code = (error as { code?: string } | null)?.code;
+  if (code === "42P01") {
+    return "force_merge_records does not exist: apply migration 0028_force_merge_stats.sql to this deployment's database.";
+  }
+  if (error instanceof Error && error.message === "DATABASE_URL is not set") {
+    return "DATABASE_URL is not set for this deployment.";
+  }
+  return code ? `Database error ${code}.` : "Unexpected error; see function logs.";
+}
+
 export async function GET() {
   try {
     const { data } = await getOrLoadCached(CACHE_KEY, TTL, loadForceMergeSummary);
@@ -128,7 +141,7 @@ export async function GET() {
   } catch (error) {
     console.error("Failed to load force-merge summary:", error);
     return NextResponse.json(
-      { error: "Failed to load force-merge summary" },
+      { error: "Failed to load force-merge summary", detail: describeError(error) },
       { status: 500 },
     );
   }
