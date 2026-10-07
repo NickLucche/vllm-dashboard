@@ -22,3 +22,22 @@ CREATE INDEX IF NOT EXISTS idx_force_merge_records_merged
 -- Partial index for the top-force-merged-authors aggregation window.
 CREATE INDEX IF NOT EXISTS idx_force_merge_records_author
     ON force_merge_records (author, merged_at DESC) WHERE force_merged;
+
+-- Reachable only through trusted server-side connections.
+ALTER TABLE public.force_merge_records ENABLE ROW LEVEL SECURITY;
+
+DO $$
+DECLARE
+    api_role name;
+BEGIN
+    FOREACH api_role IN ARRAY ARRAY['anon'::name, 'authenticated'::name]
+    LOOP
+        IF EXISTS (SELECT FROM pg_roles WHERE rolname = api_role) THEN
+            EXECUTE format(
+                'REVOKE ALL PRIVILEGES ON TABLE public.force_merge_records FROM %I',
+                api_role
+            );
+        END IF;
+    END LOOP;
+END;
+$$;
