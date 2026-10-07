@@ -4,14 +4,12 @@ import {
   createGitHubClient,
   daysToIngest,
   fetchWindowRecords,
+  HISTORY_START,
   upsertForceMergeRecords,
 } from "@/lib/force-merge-stats";
 
 export const maxDuration = 55;
 
-// History window. Missing days are fetched newest first, so a backfill
-// spreads across hourly runs without delaying recent data.
-const BACKFILL_DAYS = 182;
 // Stop starting new days after this, leaving headroom under maxDuration for
 // the in-flight day's fetch and upsert.
 const TIME_BUDGET_MS = 30_000;
@@ -41,12 +39,13 @@ export async function GET(request: NextRequest) {
     const storedRows = await db<{ day: string }[]>`
       SELECT DISTINCT (merged_at AT TIME ZONE 'UTC')::date::text AS day
       FROM force_merge_records
-      WHERE merged_at >= now() - (${BACKFILL_DAYS + 1} * interval '1 day')
+      WHERE merged_at >= ${HISTORY_START}
     `;
+    // Missing days are fetched newest first, so a backfill spreads across
+    // hourly runs without delaying recent data.
     const days = daysToIngest(
       new Set(storedRows.map((row) => row.day)),
       fetchedAt,
-      BACKFILL_DAYS,
     );
     let fetched = 0;
     let forced = 0;

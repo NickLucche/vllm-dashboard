@@ -66,7 +66,7 @@ const WINDOW_LABELS: Record<number, string> = {
   7: "Last 7 days",
   30: "Last 30 days",
   90: "Last 90 days",
-  182: "Last 6 months",
+  365: "Last 12 months",
 };
 
 const FORCED_COLOR = "#fb923c";
@@ -150,7 +150,7 @@ export default function ForceMergesPage() {
     data ?? {};
   const hasData = (summary?.records ?? 0) > 0;
   const authorWindowMonths = Math.round(
-    (summary?.authorWindowDays ?? 182) / 30,
+    (summary?.authorWindowDays ?? 365) / 30.4,
   );
   const volumeData = weekly.map((w) => ({
     ...w,

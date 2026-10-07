@@ -60,19 +60,19 @@ test("searchQueryForWindow targets merged PRs in the repository", () => {
 
 test("daysToIngest fetches missing days newest first and always re-reads today and yesterday", () => {
   const now = new Date("2026-09-25T12:00:00Z");
-  const days = (stored: string[], backfillDays: number) =>
-    daysToIngest(new Set(stored), now, backfillDays).map((day) =>
+  const days = (stored: string[], since: string) =>
+    daysToIngest(new Set(stored), now, utcDate(since)).map((day) =>
       isoDay(day.start),
     );
 
-  assert.deepEqual(days([], 3), [
+  assert.deepEqual(days([], "2026-09-22"), [
     "2026-09-25",
     "2026-09-24",
     "2026-09-23",
     "2026-09-22",
   ]);
   assert.deepEqual(
-    days(["2026-09-25", "2026-09-24", "2026-09-23", "2026-09-21"], 4),
+    days(["2026-09-25", "2026-09-24", "2026-09-23", "2026-09-21"], "2026-09-21"),
     ["2026-09-25", "2026-09-24", "2026-09-22"],
     "skips stored days except the two still settling, and fills gaps",
   );

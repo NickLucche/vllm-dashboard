@@ -4,26 +4,27 @@
  * database (or a preview pointed at one) shows no data until this runs.
  *
  *   DATABASE_URL=postgres://... GITHUB_TOKEN=$(gh auth token) \
- *     npm run backfill:force-merges -- [--days 182] [--dry-run]
+ *     npm run backfill:force-merges -- [--since 2025-10-01] [--dry-run]
  */
 import postgres from "postgres";
 import {
   createGitHubClient,
   dateRangeChunks,
   fetchWindowRecords,
+  HISTORY_START,
   upsertForceMergeRecords,
 } from "../src/lib/force-merge-stats";
 
-const DAY_MS = 86_400_000;
 // Days fetched in parallel; each issues serial GraphQL search pages.
 const CONCURRENCY = 4;
 
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
-const daysArg = args.indexOf("--days");
-const days = daysArg >= 0 ? Number(args[daysArg + 1]) : 182;
-if (!Number.isInteger(days) || days <= 0) {
-  throw new Error(`--days must be a positive integer, got ${args[daysArg + 1]}`);
+const sinceArg = args.indexOf("--since");
+const since =
+  sinceArg >= 0 ? new Date(`${args[sinceArg + 1]}T00:00:00Z`) : HISTORY_START;
+if (Number.isNaN(since.getTime())) {
+  throw new Error(`--since must be YYYY-MM-DD, got ${args[sinceArg + 1]}`);
 }
 
 const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
@@ -37,7 +38,7 @@ const db = dryRun
   : postgres(process.env.DATABASE_URL!, { ssl: "require", prepare: false, max: CONCURRENCY });
 const client = createGitHubClient(token);
 const now = new Date();
-const chunks = dateRangeChunks(new Date(now.getTime() - days * DAY_MS), now);
+const chunks = dateRangeChunks(since, now);
 
 let next = 0;
 let fetched = 0;

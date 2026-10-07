@@ -29,6 +29,8 @@ const SEARCH_PAGE_SIZE = 50;
 const STATUS_PAGE_SIZE = 100;
 const MAX_STATUS_PAGES = 20;
 const DAY_MS = 86_400_000;
+/** First UTC day of force-merge history kept by the ingest. */
+export const HISTORY_START = new Date("2025-10-01T00:00:00Z");
 
 const MERGED_PR_SEARCH_QUERY = `
 query($q: String!, $cursor: String) {
@@ -136,18 +138,18 @@ export function dateRangeChunks(
 
 /**
  * UTC days the ingest should fetch, newest first: today and yesterday (merges
- * still landing, plus search-index lag) and every day in the backfill window
- * with no stored merges. A merged PR's CI state at merge never changes, so
+ * still landing, plus search-index lag) and every day since historyStart with
+ * no stored merges. A merged PR's CI state at merge never changes, so
  * stored days are not re-read; newest-first fills the recent rate windows on
  * the first run and lets an interrupted backfill resume from the gap.
  */
 export function daysToIngest(
   storedDays: ReadonlySet<string>,
   now: Date,
-  backfillDays: number,
+  historyStart: Date = HISTORY_START,
 ): Array<{ start: Date; end: Date }> {
   const today = utcMidnight(now);
-  return dateRangeChunks(new Date(today - backfillDays * DAY_MS), now)
+  return dateRangeChunks(historyStart, now)
     .reverse()
     .filter(
       (day) =>

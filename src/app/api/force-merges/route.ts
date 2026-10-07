@@ -8,10 +8,9 @@ const TTL = 10 * 60_000;
 const CDN_CACHE = { maxAge: 600, staleWhileRevalidate: 3_600 };
 
 // Window lengths for the headline force-merge rate cards.
-const RATE_WINDOW_DAYS = [7, 30, 90, 182];
-// Top-author ranking looks back the same six-month window the ingest
-// backfills, so the leaderboard is comparable from the first full backfill on.
-const AUTHOR_WINDOW_DAYS = 182;
+const RATE_WINDOW_DAYS = [7, 30, 90, 365];
+// Top-author ranking covers the last year, matching the longest rate card.
+const AUTHOR_WINDOW_DAYS = 365;
 const TOP_AUTHOR_COUNT = 15;
 const RECENT_COUNT = 30;
 
