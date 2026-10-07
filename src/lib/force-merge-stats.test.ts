@@ -8,7 +8,7 @@ import {
   ciStateAtMerge,
   dateRangeChunks,
   fetchWindowRecords,
-  ingestStartDate,
+  daysToIngest,
   searchQueryForWindow,
 } from "./force-merge-stats";
 
@@ -58,18 +58,23 @@ test("searchQueryForWindow targets merged PRs in the repository", () => {
   );
 });
 
-test("ingestStartDate backfills an empty table and otherwise resumes near the newest merge", () => {
+test("daysToIngest fetches missing days newest first and always re-reads today and yesterday", () => {
   const now = new Date("2026-09-25T12:00:00Z");
-  assert.equal(isoDay(ingestStartDate(null, now, 182)), "2026-03-27");
-  assert.equal(
-    isoDay(ingestStartDate(new Date("2026-09-24T23:59:00Z"), now, 182)),
+  const days = (stored: string[], backfillDays: number) =>
+    daysToIngest(new Set(stored), now, backfillDays).map((day) =>
+      isoDay(day.start),
+    );
+
+  assert.deepEqual(days([], 3), [
+    "2026-09-25",
+    "2026-09-24",
     "2026-09-23",
-    "re-reads the day before the newest stored merge",
-  );
-  assert.equal(
-    isoDay(ingestStartDate(new Date("2025-01-01T00:00:00Z"), now, 182)),
-    "2026-03-27",
-    "never reaches past the backfill window",
+    "2026-09-22",
+  ]);
+  assert.deepEqual(
+    days(["2026-09-25", "2026-09-24", "2026-09-23", "2026-09-21"], 4),
+    ["2026-09-25", "2026-09-24", "2026-09-22"],
+    "skips stored days except the two still settling, and fills gaps",
   );
 });
 

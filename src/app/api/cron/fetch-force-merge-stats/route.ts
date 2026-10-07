@@ -2,16 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import {
   createGitHubClient,
-  dateRangeChunks,
+  daysToIngest,
   fetchWindowRecords,
-  ingestStartDate,
   upsertForceMergeRecords,
 } from "@/lib/force-merge-stats";
 
 export const maxDuration = 55;
 
-// History kept when the table is empty. Later runs resume from the newest
-// stored merge, so a backfill spreads across hourly runs.
+// History window. Missing days are fetched newest first, so a backfill
+// spreads across hourly runs without delaying recent data.
 const BACKFILL_DAYS = 182;
 // Stop starting new days after this, leaving headroom under maxDuration for
 // the in-flight day's fetch and upsert.
@@ -39,13 +38,15 @@ export async function GET(request: NextRequest) {
     const db = getDb();
     const client = createGitHubClient(token);
     const fetchedAt = new Date();
-    const [{ last_merged_at: lastMergedAt }] = await db<
-      { last_merged_at: Date | null }[]
-    >`SELECT max(merged_at) AS last_merged_at FROM force_merge_records`;
-
-    const days = dateRangeChunks(
-      ingestStartDate(lastMergedAt, fetchedAt, BACKFILL_DAYS),
+    const storedRows = await db<{ day: string }[]>`
+      SELECT DISTINCT (merged_at AT TIME ZONE 'UTC')::date::text AS day
+      FROM force_merge_records
+      WHERE merged_at >= now() - (${BACKFILL_DAYS + 1} * interval '1 day')
+    `;
+    const days = daysToIngest(
+      new Set(storedRows.map((row) => row.day)),
       fetchedAt,
+      BACKFILL_DAYS,
     );
     let fetched = 0;
     let forced = 0;
@@ -61,8 +62,10 @@ export async function GET(request: NextRequest) {
 
     const isoDate = (date: Date) => date.toISOString().slice(0, 10);
     return NextResponse.json({
-      from: isoDate(days[0].start),
-      through: isoDate(days[daysDone - 1].end),
+      newestDay: isoDate(days[0].start),
+      oldestDay: isoDate(days[daysDone - 1].start),
+      daysFetched: daysDone,
+      daysRemaining: days.length - daysDone,
       complete: daysDone === days.length,
       fetched,
       forced,

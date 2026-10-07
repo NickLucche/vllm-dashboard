@@ -135,18 +135,25 @@ export function dateRangeChunks(
 }
 
 /**
- * First UTC day to ingest. A merged PR's CI state at merge never changes, so
- * ingest resumes from the newest stored merge (re-reading the day before it to
- * cover search-index lag) and only backfills when the table is empty.
+ * UTC days the ingest should fetch, newest first: today and yesterday (merges
+ * still landing, plus search-index lag) and every day in the backfill window
+ * with no stored merges. A merged PR's CI state at merge never changes, so
+ * stored days are not re-read; newest-first fills the recent rate windows on
+ * the first run and lets an interrupted backfill resume from the gap.
  */
-export function ingestStartDate(
-  lastMergedAt: Date | null,
+export function daysToIngest(
+  storedDays: ReadonlySet<string>,
   now: Date,
   backfillDays: number,
-): Date {
-  const floor = utcMidnight(now) - backfillDays * DAY_MS;
-  if (!lastMergedAt) return new Date(floor);
-  return new Date(Math.max(floor, utcMidnight(lastMergedAt) - DAY_MS));
+): Array<{ start: Date; end: Date }> {
+  const today = utcMidnight(now);
+  return dateRangeChunks(new Date(today - backfillDays * DAY_MS), now)
+    .reverse()
+    .filter(
+      (day) =>
+        day.start.getTime() >= today - DAY_MS ||
+        !storedDays.has(day.start.toISOString().slice(0, 10)),
+    );
 }
 
 export function searchQueryForWindow(chunkStart: Date, chunkEnd: Date): string {
