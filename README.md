@@ -23,8 +23,8 @@ client credentials are needed for dashboard reads.
 - **Performance** — benchmark trends ingested into the warehouse.
 - **Compare** — release-oriented baseline/candidate image deltas across performance and evaluation metrics.
 - **Force-merges** — how often vLLM PRs are merged while `buildkite/ci/pr` is
-  red: rate windows, weekly trend, merge volume, top PR authors, and recent
-  force-merged PRs.
+  red: rate windows, daily or weekly rate and merge volume over 7d/30d/90d/1y,
+  top PR authors, and recent force-merged PRs.
 
 ## Architecture
 
